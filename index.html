@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Public Records Packager — records request fulfillment inside Outlook</title>
+  <meta name="description" content="Outlook add-in for records custodians: search your mail for responsive records and build a numbered, manifest-indexed bundle in OneDrive. Records never leave your tenant." />
+  <style>
+    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 3rem auto; max-width: 44rem; padding: 0 1rem; color: #242424; line-height: 1.55; }
+    h1 { color: #0f6cbd; margin-bottom: 0.2rem; }
+    h2 { margin-top: 2rem; }
+    .tagline { color: #616161; font-size: 1.1rem; margin-top: 0; }
+    .badge { display: inline-block; background: #eff6fc; color: #0c5aa0; border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.85rem; margin: 0.15rem 0.25rem 0.15rem 0; }
+    img.icon { width: 96px; height: 96px; float: right; margin: 0 0 1rem 1rem; }
+    footer { margin-top: 3rem; color: #616161; font-size: 0.9rem; }
+    code { background: #f3f2f1; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <img class="icon" src="assets/icon-128.png" alt="Public Records Packager icon" />
+  <h1>Public Records Packager</h1>
+  <p class="tagline">FOIA and open-records email collection, done in minutes instead of afternoons — inside your own tenant.</p>
+
+  <p>
+    <span class="badge">Search → review → bundle</span>
+    <span class="badge">.eml + printable copy + attachments</span>
+    <span class="badge">Manifest with exemption columns</span>
+    <span class="badge">Records never leave your tenant</span>
+    <span class="badge">Free</span>
+  </p>
+
+  <h2>Why</h2>
+  <p>Request-management suites track the request — but the actual collection
+     step is still an employee saving emails out of Outlook one at a time.
+     For agencies without a $10K/year suite, the whole process is manual.</p>
+
+  <h2>What it does</h2>
+  <ul>
+    <li><strong>Search</strong> your own mailbox by keywords, date range, and participant.</li>
+    <li><strong>Review</strong> the chronological result list; deselect out-of-scope items.</li>
+    <li><strong>Bundle</strong> — one click writes a numbered production to your
+        OneDrive: exact <code>.eml</code> per message, printable <code>.html</code>
+        copy, attachments in original format, <code>manifest.csv</code> with
+        blank exemption columns, and a README for counsel.</li>
+    <li><strong>Redaction stays in your tools</strong> — the Packager collects and
+        packages; exemption review remains with the records officer.</li>
+  </ul>
+
+  <h2>Privacy by design</h2>
+  <p>No servers, no accounts, no analytics. Two delegated permissions
+     (Mail.Read, Files.ReadWrite — your own mailbox and OneDrive), all inside
+     the Microsoft 365 boundary. For records work, that's not just privacy —
+     it's chain-of-custody sanity. Read the
+     <a href="privacy-policy.html">privacy policy</a>.</p>
+
+  <h2>Get it</h2>
+  <p><em>Coming to Microsoft AppSource.</em> Agencies interested in piloting:
+     <a href="mailto:Matthew@purposebuilt.systems">Matthew@purposebuilt.systems</a>.</p>
+
+  <footer>
+    <a href="privacy-policy.html">Privacy</a> · <a href="terms.html">Terms</a> ·
+    <a href="support.html">Support</a> · PurposeBuilt Systems LLC
+  </footer>
+</body>
+</html>

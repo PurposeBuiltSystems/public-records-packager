@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Public Records Packager - Outlook add-in (add-in only / XML manifest).
+
+  One task-pane button on the message-read ribbon. The pane searches the
+  signed-in user's own mailbox for records responsive to a public-records
+  request, lets the custodian review/deselect, and builds a numbered,
+  chronological bundle in the user's own OneDrive: exact .eml per message,
+  a printable .html copy, attachments in original format, and a manifest.csv
+  with blank exemption columns for the records officer. Redaction stays
+  downstream in the agency's existing tools.
+
+  Sign-in uses nested app authentication (MSAL) - no backend. Delegated
+  scopes: Mail.Read + Files.ReadWrite (own mailbox and own OneDrive only).
+  Records never leave the user's Microsoft 365 tenant.
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
+
+  <Id>428adbd0-641d-4e28-ab8f-bb69cf1796f2</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>PurposeBuiltSystems</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Public Records Packager" />
+  <Description DefaultValue="Search your mail for responsive records and build a numbered, manifest-indexed records bundle in OneDrive." />
+  <IconUrl DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-64.png" />
+  <HighResolutionIconUrl DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-128.png" />
+  <SupportUrl DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/support.html" />
+
+  <AppDomains>
+    <AppDomain>https://purposebuiltsystems.github.io</AppDomain>
+    <AppDomain>https://login.microsoftonline.com</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.5" />
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/src/taskpane/taskpane.html" />
+        <RequestedHeight>250</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <!-- ReadItem only: the pane never reads the open message; all mail access
+       happens via Graph (delegated Mail.ReadWrite, own mailbox). -->
+  <Permissions>ReadItem</Permissions>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.5">
+        <bt:Set Name="Mailbox" />
+      </bt:Sets>
+    </Requirements>
+
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="recordsGroup">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="Button" id="openRecordsButton">
+                  <Label resid="ButtonLabel" />
+                  <Supertip>
+                    <Title resid="ButtonLabel" />
+                    <Description resid="ButtonTip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16" />
+                    <bt:Image size="32" resid="Icon.32" />
+                    <bt:Image size="80" resid="Icon.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-16.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-32.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/src/taskpane/taskpane.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GroupLabel" DefaultValue="Records" />
+        <bt:String id="ButtonLabel" DefaultValue="Records Packager" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="ButtonTip" DefaultValue="Search your mail for responsive records and build a numbered records bundle in OneDrive with a manifest for exemption review." />
+      </bt:LongStrings>
+    </Resources>
+
+    <!-- Outlook mobile (iOS/Android): same pane, dormant until the store
+         listing opts in to mobile. -->
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.5">
+          <bt:Set Name="Mailbox" />
+        </bt:Sets>
+      </Requirements>
+
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="recordsGroup">
+                  <Label resid="GroupLabel" />
+                  <Control xsi:type="Button" id="openRecordsButton">
+                    <Label resid="ButtonLabel" />
+                    <Supertip>
+                      <Title resid="ButtonLabel" />
+                      <Description resid="ButtonTip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16" />
+                      <bt:Image size="32" resid="Icon.32" />
+                      <bt:Image size="80" resid="Icon.80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Taskpane.Url" />
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+
+          <MobileFormFactor>
+            <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
+              <Group id="mobileRecordsGroup">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="MobileButton" id="mobileOpenRecordsButton">
+                  <Label resid="ButtonLabel" />
+                  <Icon xsi:type="bt:MobileIconList">
+                    <bt:Image size="25" scale="1" resid="Icon.25" />
+                    <bt:Image size="25" scale="2" resid="Icon.50" />
+                    <bt:Image size="25" scale="3" resid="Icon.75" />
+                    <bt:Image size="32" scale="1" resid="Icon.32" />
+                    <bt:Image size="32" scale="2" resid="Icon.64" />
+                    <bt:Image size="32" scale="3" resid="Icon.96" />
+                    <bt:Image size="48" scale="1" resid="Icon.48" />
+                    <bt:Image size="48" scale="2" resid="Icon.96" />
+                    <bt:Image size="48" scale="3" resid="Icon.144" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </ExtensionPoint>
+          </MobileFormFactor>
+        </Host>
+      </Hosts>
+
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon.16" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-16.png" />
+          <bt:Image id="Icon.25" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-25.png" />
+          <bt:Image id="Icon.32" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-32.png" />
+          <bt:Image id="Icon.48" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-48.png" />
+          <bt:Image id="Icon.50" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-50.png" />
+          <bt:Image id="Icon.64" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-64.png" />
+          <bt:Image id="Icon.75" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-75.png" />
+          <bt:Image id="Icon.80" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-80.png" />
+          <bt:Image id="Icon.96" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-96.png" />
+          <bt:Image id="Icon.144" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/assets/icon-144.png" />
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Taskpane.Url" DefaultValue="https://purposebuiltsystems.github.io/public-records-packager/src/taskpane/taskpane.html" />
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="GroupLabel" DefaultValue="Records" />
+          <bt:String id="ButtonLabel" DefaultValue="Records Packager" />
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="ButtonTip" DefaultValue="Search your mail for responsive records and build a numbered records bundle in OneDrive with a manifest for exemption review." />
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Public Records Packager</title>
+
+  <!-- Office.js -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <!-- MSAL Browser (provides createNestablePublicClientApplication for NAA) -->
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
+
+  <link rel="stylesheet" href="taskpane.css" />
+</head>
+<body>
+  <header class="app-head">
+    <h1>Public Records Packager</h1>
+    <p class="sub">Search your mail for responsive records, review, and build a numbered records bundle in your OneDrive — with a manifest ready for exemption review.</p>
+  </header>
+
+  <section class="controls">
+    <details id="options" class="options" open>
+      <summary>Search criteria</summary>
+      <div class="row">
+        <label>Search terms
+          <input id="query" type="text" placeholder='e.g. "bridge inspection"' />
+        </label>
+      </div>
+      <div class="row">
+        <label>From date <input id="fromDate" type="date" /></label>
+        <label>To date <input id="toDate" type="date" /></label>
+      </div>
+      <div class="row">
+        <label>Participant (optional)
+          <input id="participant" type="text" placeholder="name or email" />
+        </label>
+      </div>
+    </details>
+    <button id="search" class="primary">Find responsive messages</button>
+  </section>
+
+  <section id="status" class="status" hidden></section>
+
+  <section id="results" class="results" hidden>
+    <div class="actions">
+      <button id="selectAll">Select all</button>
+    </div>
+    <div id="messages"></div>
+    <div class="options" style="padding:10px; margin-top:8px;">
+      <div class="row">
+        <label>Bundle folder name
+          <input id="bundleName" type="text" />
+        </label>
+      </div>
+      <button id="build" class="primary">Build records bundle in OneDrive</button>
+    </div>
+  </section>
+
+  <script src="../graph.js"></script>
+  <script src="../packager.js"></script>
+  <script src="taskpane.js"></script>
+</body>
+</html>

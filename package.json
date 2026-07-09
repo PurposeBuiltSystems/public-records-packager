@@ -1,0 +1,15 @@
+{
+  "name": "public-records-packager",
+  "version": "1.0.0",
+  "description": "Outlook add-in that searches your mail for responsive records and builds a numbered, manifest-indexed records bundle in OneDrive.",
+  "private": true,
+  "scripts": {
+    "validate": "office-addin-manifest validate manifest.xml",
+    "test": "node test/packager.test.js"
+  },
+  "author": "Matthew Miller",
+  "license": "MIT",
+  "devDependencies": {
+    "office-addin-manifest": "^2.0.4"
+  }
+}

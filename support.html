@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — Public Records Packager</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 3rem auto; max-width: 44rem; padding: 0 1rem; color: #242424; line-height: 1.55; }
+    h1 { color: #0f6cbd; }
+    h2 { margin-top: 2rem; }
+    code { background: #f3f2f1; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .muted { color: #616161; }
+  </style>
+</head>
+<body>
+  <h1>Support</h1>
+  <p class="muted">Add-in: <strong>Public Records Packager</strong></p>
+
+  <h2>What it does</h2>
+  <p>Searches your own mailbox for records responsive to a public-records
+     request and builds a numbered, chronological bundle in your OneDrive:
+     exact .eml per message, a printable .html copy, attachments in original
+     format, and a manifest.csv with blank exemption columns.</p>
+
+  <h2>How to use it</h2>
+  <ol>
+    <li>Open any message in Outlook and click <strong>Records Packager</strong> on the ribbon.</li>
+    <li>Enter search terms (and optionally a date range and participant), then
+        <strong>Find responsive messages</strong>. Sign in / consent the first time.</li>
+    <li>Review the chronological list — uncheck anything out of scope.</li>
+    <li>Name the bundle folder and click <strong>Build records bundle in
+        OneDrive</strong>. The bundle lands in
+        <code>OneDrive / Records Requests / &lt;your name&gt;</code>.</li>
+    <li>Perform redaction and exemption review in your normal tools; record
+        determinations in <code>manifest.csv</code>. Print the .html copies to
+        PDF for release versions.</li>
+  </ol>
+
+  <h2>Bundle contents</h2>
+  <ul>
+    <li><code>NNNN_date_subject.eml</code> — exact archival copy (opens in Outlook)</li>
+    <li><code>NNNN_date_subject.html</code> — printable copy (browser → print to PDF)</li>
+    <li><code>NNNN_attachments/</code> — that message's files, original format</li>
+    <li><code>manifest.csv</code> — index with released_in_full / exemption_notes /
+        statute_cited columns for the records officer</li>
+    <li><code>README.txt</code> — explains the layout to counsel/requesters</li>
+  </ul>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li><strong>Search is keyword-based</strong> (Outlook full-text search) and capped
+        around 1,000 results — run multiple narrower searches for very large requests.</li>
+    <li><strong>No redaction:</strong> bundles contain unredacted records — review
+        before release.</li>
+    <li><strong>Chronological numbering</strong> is oldest-first, the conventional
+        production order.</li>
+  </ul>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li><strong>Bundle failed partway:</strong> already-uploaded files remain in the
+        OneDrive folder; rerun into a fresh folder name.</li>
+    <li><strong>A message is missing:</strong> try different keywords — search
+        matches words, not concepts; also check the date filter.</li>
+    <li><strong>Button doesn't appear:</strong> Microsoft 365 / Exchange Online
+        account required.</li>
+  </ul>
+
+  <h2>Privacy</h2>
+  <p>Records never leave your Microsoft 365 tenant — search runs in your own
+     session and the bundle is written to your own OneDrive. See the
+     <a href="privacy-policy.html">Privacy Policy</a>.</p>
+
+  <h2>Contact</h2>
+  <p>For help or to report an issue, email
+     <a href="mailto:Matthew@purposebuilt.systems">Matthew@purposebuilt.systems</a>.</p>
+</body>
+</html>
