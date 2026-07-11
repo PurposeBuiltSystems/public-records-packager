@@ -120,6 +120,9 @@
     byId("build").disabled = true;
     try {
       var token = await GraphData.getToken();
+      setStatus("work", "Checking OneDrive…");
+      await GraphData.ensureDrive(token);
+      await GraphData.ensureFolder(token, root);
       var plan = Packager.plan(selected);
 
       for (var i = 0; i < plan.length; i++) {
@@ -139,6 +142,7 @@
           var atts = await GraphData.getAttachments(token, p.message.id);
           var names = Packager.attachmentNames(atts.map(function (a) { return a.name; }));
           p.attachmentNames = names;
+          if (atts.length) { await GraphData.ensureFolder(token, root + "/" + p.attDir); }
           for (var j = 0; j < atts.length; j++) {
             await GraphData.uploadFile(token, root + "/" + p.attDir + "/" + names[j], GraphData.b64ToBytes(atts[j].contentBytes));
           }

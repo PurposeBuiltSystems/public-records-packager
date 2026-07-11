@@ -120,8 +120,48 @@
   var SMALL_LIMIT = 3800000; // simple PUT is fine below ~4MB
 
   /**
-   * Upload content to /me/drive at the given path (folders auto-created).
-   * `content` is a string (text files) or Uint8Array (binary).
+   * Fail fast with a human message when the user's OneDrive has never been
+   * provisioned (licensed but never opened once — /me/drive returns 404).
+   */
+  async function ensureDrive(token) {
+    var res = await fetch(GRAPH + "/me/drive?$select=id", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (res.status === 404) {
+      throw new Error("Your OneDrive isn't set up yet. Open OneDrive once at https://www.office.com (choose the OneDrive app and let it load) to activate it, then build again. If OneDrive won't open, your Microsoft 365 plan may not include it.");
+    }
+    if (!res.ok) { throw new Error("OneDrive check -> " + res.status + " " + (await res.text())); }
+  }
+
+  var ensuredFolders = {};
+
+  /** Create every folder in `path` that doesn't exist yet (root-relative). */
+  async function ensureFolder(token, path) {
+    var segs = path.split("/").filter(Boolean);
+    var soFar = "";
+    for (var i = 0; i < segs.length; i++) {
+      var parent = soFar;
+      soFar = soFar ? soFar + "/" + segs[i] : segs[i];
+      if (ensuredFolders[soFar]) { continue; }
+      var url = parent
+        ? "/me/drive/root:/" + parent.split("/").map(encodeURIComponent).join("/") + ":/children"
+        : "/me/drive/root/children";
+      var res = await fetch(GRAPH + url, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: segs[i], folder: {}, "@microsoft.graph.conflictBehavior": "fail" }),
+      });
+      // 409 = already exists — exactly what we want.
+      if (!res.ok && res.status !== 409) {
+        throw new Error("OneDrive folder \"" + soFar + "\" -> " + res.status + " " + (await res.text()));
+      }
+      ensuredFolders[soFar] = true;
+    }
+  }
+
+  /**
+   * Upload content to /me/drive at the given path (parent folders must exist —
+   * call ensureFolder first). `content` is a string (text) or Uint8Array.
    */
   async function uploadFile(token, path, content) {
     var bytes = typeof content === "string" ? new TextEncoder().encode(content) : content;
@@ -166,6 +206,8 @@
 
   root.GraphData = {
     getToken: getToken,
+    ensureDrive: ensureDrive,
+    ensureFolder: ensureFolder,
     searchMessages: searchMessages,
     getMime: getMime,
     getBody: getBody,
