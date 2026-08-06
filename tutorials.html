@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorial — Public Records Packager</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 3rem auto; max-width: 44rem; padding: 0 1rem; color: #242424; line-height: 1.6; }
+    h1 { color: #0f6cbd; } h2 { color: #0f6cbd; margin-top: 2.4rem; } h3 { margin-top: 1.6rem; }
+    .step { background: #f8f8f8; border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+    .step b { color: #0f6cbd; }
+    .note { background: #fff8e6; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+    .lede { background: #eff6fc; border-radius: 8px; padding: 12px 16px; }
+    .see { border-left: 3px solid #0f6cbd; background: #f4f9fd; padding: 8px 14px; margin: 8px 0 14px; font-size: .95em; }
+    .see b { color: #0f6cbd; }
+    .wrong { border-left: 3px solid #c4314b; background: #fdf3f4; padding: 10px 14px; margin: 12px 0; }
+    .wrong b { color: #c4314b; }
+    .stop { border: 2px solid #c4314b; background: #fdf3f4; border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
+    .stop b { color: #c4314b; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: .92em; }
+    th, td { border: 1px solid #d1d1d1; padding: 6px 10px; text-align: left; vertical-align: top; }
+    th { background: #eef4f6; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: .92em; }
+    pre { background: #f4f4f4; border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: .88em; line-height: 1.45; }
+    footer { margin-top: 3rem; color: #616161; font-size: .9em; }
+    @media print { body { margin: 0.5in; } }
+  </style>
+</head>
+<body>
+  <h1>Public Records Packager — Tutorial</h1>
+  <p class="lede">A records request arrives. The response is assembled by hand: search the
+     mailbox, save each message, save the attachments alongside, number everything, build a
+     manifest. This does the assembly. <b>It does not do the review, and it never redacts.</b></p>
+
+  <div class="stop"><b>Read this before your first bundle.</b> The bundle this produces is
+     <b>unredacted source material for you to review</b> — it is not a release package. Nothing
+     in it has been checked for confidential information, and no exemption has been applied.
+     Treat it exactly as you would treat the raw mailbox: it goes to your reviewer, not to the
+     requester.</div>
+
+  <h2>Tutorial — building a bundle</h2>
+  <p><b>Worked example:</b> a request for correspondence about a bridge inspection contract
+     between January and June 2026.</p>
+
+  <div class="step"><b>1.</b> Click <b>Records Packager</b> in the <b>Records</b> ribbon group.</div>
+  <div class="step"><b>2.</b> Under <b>Search criteria</b>, fill in:</div>
+  <table>
+    <tr><th>Field</th><th>Example</th></tr>
+    <tr><td><b>Search terms</b></td><td><code>bridge inspection contract</code></td></tr>
+    <tr><td><b>From date</b> / <b>To date</b></td><td>2026-01-01 → 2026-06-30</td></tr>
+    <tr><td><b>Participant</b> (optional)</td><td>a specific person's address, to narrow further</td></tr>
+    <tr><td><b>Bundle folder name</b></td><td><code>2026-07 Bridge inspection - Rasmussen</code></td></tr>
+  </table>
+  <div class="step"><b>3.</b> Click <b>Find responsive messages</b>.</div>
+  <div class="see"><b>You should see</b> a chronological checklist of matches. Nothing has been
+     written anywhere yet.</div>
+  <div class="step"><b>4.</b> Work the checklist. Tick what's genuinely responsive and untick
+     what isn't — this is a judgment only you can make. <b>Select all</b> is there for when the
+     search was already tight.</div>
+  <div class="step"><b>5.</b> Click <b>Build records bundle in OneDrive</b>.</div>
+
+  <h2>What you get</h2>
+  <p>A folder under <code>Records Requests/&lt;your bundle name&gt;/</code> in your OneDrive:</p>
+  <pre>0001_2026-02-14_Bridge inspection scope.eml
+0001_2026-02-14_Bridge inspection scope.html
+0001_attachments/
+    Inspection scope v3.pdf
+0002_2026-02-19_RE Bridge inspection scope.eml
+0002_2026-02-19_RE Bridge inspection scope.html
+manifest.csv
+README.txt</pre>
+  <table>
+    <tr><th>Part</th><th>Why it's there</th></tr>
+    <tr><td><b>.eml</b></td><td>The exact original message, headers and all — the defensible copy if anyone questions authenticity.</td></tr>
+    <tr><td><b>.html</b></td><td>A readable copy you can print to PDF from your browser for release.</td></tr>
+    <tr><td><b>NNNN_attachments/</b></td><td>Attachments in their original formats, names de-duplicated.</td></tr>
+    <tr><td><b>manifest.csv</b></td><td>From, to, cc, subject, attachments — plus <b>blank columns</b> for <code>released_in_full</code>, <code>exemption_notes</code> and <code>statute_cited</code>.</td></tr>
+  </table>
+  <div class="see">Those three blank columns are the point of the manifest. Iowa Code ch. 22
+     requires a <b>statute cited per redaction</b>, so the log has to exist anyway. Better it
+     starts as a row per record than as a blank spreadsheet you build at the end.</div>
+
+  <h2>Why it doesn't redact</h2>
+  <div class="wrong"><b>This is a deliberate limit, not a missing feature.</b> Deciding what is
+     confidential is a legal judgment with real consequences — for the requester, for third
+     parties named in the records, and for you. Software that guessed at it would be wrong
+     sometimes, and the failure mode is releasing something that should have been withheld. So
+     the tool assembles and numbers; a person decides and redacts, and signs their name to it.</div>
+
+  <h2>Practical notes</h2>
+  <div class="step"><b>Start narrow.</b> Search results are capped and the date filters are
+     applied after the search, so a vague term over five years wastes a pass. Tighten the terms,
+     bundle, then run a second bundle for the next angle.</div>
+  <div class="step"><b>If a build fails partway</b>, build again into a <b>fresh folder</b>
+     rather than on top of the half-finished one. A bundle with an ambiguous numbering sequence
+     is worse than no bundle.</div>
+  <div class="wrong"><b>"Couldn't reach your OneDrive"?</b> Almost always OneDrive has never been
+     opened on the account. Being licensed isn't the same as being provisioned — go to
+     office.com, open OneDrive once so it exists, then try again.</div>
+
+  <h2>Clock and cost, for context</h2>
+  <p>Iowa Code ch. 22 gives you <b>20 calendar days</b> to make a confidentiality determination
+     (ten business days is the working norm), and fees are limited to <b>actual cost</b>. This
+     add-in exists to cut the assembly hours, because assembly is the part that is pure labour
+     and no part of the judgment.</p>
+
+  <h2>Where the data goes</h2>
+  <p>Your own OneDrive, and nowhere else. No publisher server, no telemetry. It reads your
+     mailbox and writes your files, using delegated permissions that reach only what you can
+     already reach.</p>
+
+  <footer>
+    <a href="index.html">Overview</a> ·
+    <a href="support.html">Support</a> ·
+    <a href="terms.html">Terms &amp; acceptable use</a> ·
+    <a href="privacy-policy.html">Privacy</a><br />
+    PurposeBuilt Systems · Public Records Packager
+  </footer>
+</body>
+</html>
