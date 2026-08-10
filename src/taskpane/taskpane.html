@@ -11,13 +11,19 @@
   <!-- MSAL Browser (provides createNestablePublicClientApplication for NAA) -->
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
 
-  <link rel="stylesheet" href="taskpane.css?v=3" />
+  <link rel="stylesheet" href="taskpane.css?v=4" />
 </head>
 <body>
   <header class="app-head">
     <h1>Public Records Packager</h1>
     <p class="sub">Search your mail for responsive records, review, and build a numbered records bundle in your OneDrive — with a manifest ready for exemption review.</p>
   </header>
+  <!-- Certification 1100.5.7.1: a visible way out wherever there is a way in. -->
+  <div id="authRow" class="auth-row">
+    <span id="authWho">Not signed in</span>
+    <button id="signIn" class="linkish" type="button" hidden>Sign in</button>
+    <button id="signOut" class="linkish" type="button" hidden>Sign out</button>
+  </div>
 
   <section class="controls">
     <details id="options" class="options" open>
@@ -57,8 +63,8 @@
     </div>
   </section>
 
-  <script src="../graph.js?v=3"></script>
-  <script src="../packager.js?v=3"></script>
-  <script src="taskpane.js?v=3"></script>
+  <script src="../graph.js?v=4"></script>
+  <script src="../packager.js?v=4"></script>
+  <script src="taskpane.js?v=4"></script>
 </body>
 </html>
