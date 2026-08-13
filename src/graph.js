@@ -58,6 +58,25 @@
   }
 
   /** Signed-in account, or null. Reports null while signed out, by design. */
+
+  /**
+   * Microsoft Graph throttles, and this add-in makes bursts of calls - a
+   * records bundle or a bulk post is dozens to hundreds. An unretried 429
+   * aborts the whole run part-way, which is the worst possible failure for
+   * work that is half-written. One respectful retry honouring Retry-After
+   * absorbs the overwhelming majority of throttling without hammering the
+   * service; anything past that is a real outage and should surface.
+   */
+  async function fetchRetry(url, opts) {
+    var res = await fetch(url, opts);
+    if (res.status === 429 || res.status === 503) {
+      var wait = Number(res.headers.get("Retry-After") || 3) * 1000;
+      await new Promise(function (r) { setTimeout(r, Math.min(wait, 15000)); });
+      res = await fetch(url, opts);
+    }
+    return res;
+  }
+
   async function currentAccount() {
     if (signedOut) { return null; }
     try {
@@ -133,7 +152,7 @@
   }
 
   async function graphJson(token, method, path, body) {
-    var res = await fetch(GRAPH + path, {
+    var res = await fetchRetry(GRAPH + path, {
       method: method,
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
@@ -155,7 +174,7 @@
       "&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,hasAttachments&$top=25";
     var guard = 0;
     while (url && guard++ < 40) {
-      var res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+      var res = await fetchRetry(url, { headers: { Authorization: "Bearer " + token } });
       if (!res.ok) { throw new Error("Graph search -> " + res.status + " " + (await res.text())); }
       var page = await res.json();
       items = items.concat(page.value || []);
@@ -167,7 +186,7 @@
 
   /** Exact MIME (.eml) content of a message. */
   async function getMime(token, messageId) {
-    var res = await fetch(GRAPH + "/me/messages/" + messageId + "/$value", {
+    var res = await fetchRetry(GRAPH + "/me/messages/" + messageId + "/$value", {
       headers: { Authorization: "Bearer " + token },
     });
     if (!res.ok) { throw new Error("Graph MIME -> " + res.status); }
@@ -214,7 +233,7 @@
    * provisioned (licensed but never opened once — /me/drive returns 404).
    */
   async function ensureDrive(token) {
-    var res = await fetch(GRAPH + "/me/drive?$select=id", {
+    var res = await fetchRetry(GRAPH + "/me/drive?$select=id", {
       headers: { Authorization: "Bearer " + token },
     });
     if (res.status === 404) {
@@ -236,7 +255,7 @@
       var url = parent
         ? "/me/drive/root:/" + parent.split("/").map(encodeURIComponent).join("/") + ":/children"
         : "/me/drive/root/children";
-      var res = await fetch(GRAPH + url, {
+      var res = await fetchRetry(GRAPH + url, {
         method: "POST",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
         body: JSON.stringify({ name: segs[i], folder: {}, "@microsoft.graph.conflictBehavior": "fail" }),
@@ -257,7 +276,7 @@
     var bytes = typeof content === "string" ? new TextEncoder().encode(content) : content;
     var encodedPath = path.split("/").map(encodeURIComponent).join("/");
     if (bytes.length <= SMALL_LIMIT) {
-      var res = await fetch(GRAPH + "/me/drive/root:/" + encodedPath + ":/content", {
+      var res = await fetchRetry(GRAPH + "/me/drive/root:/" + encodedPath + ":/content", {
         method: "PUT",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/octet-stream" },
         body: bytes,
@@ -272,7 +291,7 @@
     var CHUNK = 5 * 1024 * 1024;
     for (var start = 0; start < bytes.length; start += CHUNK) {
       var end = Math.min(start + CHUNK, bytes.length);
-      var res2 = await fetch(session.uploadUrl, {
+      var res2 = await fetchRetry(session.uploadUrl, {
         method: "PUT",
         headers: {
           "Content-Length": String(end - start),
