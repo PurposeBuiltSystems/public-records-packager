@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "validate": "office-addin-manifest validate manifest.xml",
-    "test": "node tools/check-undeclared.js && node tools/check-pages.js && node test/packager.test.js",
+    "test": "node tools/check-undeclared.js && node tools/check-pages.js && node test/packager.test.js && node test/graph-safety.test.js && node test/auth-session.test.js && node test/build-workflow.test.js",
     "check": "node tools/check-undeclared.js"
   },
   "author": "Matthew Miller",

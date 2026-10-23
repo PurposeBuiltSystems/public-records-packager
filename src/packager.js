@@ -19,7 +19,7 @@
       .replace(/[. ]+$/, ""); // OneDrive rejects trailing dots/spaces
     if (!s) { s = "untitled"; }
     var cap = maxLen || 60;
-    return s.length > cap ? s.slice(0, cap).trim() : s;
+    return s.slice(0, cap).replace(/[. ]+$/, "") || "untitled";
   }
 
   function pad(n, width) {
@@ -68,7 +68,7 @@
 
   /** De-duplicate attachment filenames within one message's folder. */
   function attachmentNames(names) {
-    var seen = {};
+    var seen = Object.create(null);
     return (names || []).map(function (raw) {
       var name = sanitize(raw, 80);
       var dot = name.lastIndexOf(".");
@@ -87,6 +87,8 @@
 
   function csvField(v) {
     var s = String(v == null ? "" : v);
+    // Keep untrusted text from becoming a formula when opened in Excel.
+    if (typeof v !== "number" && /^[\s\uFEFF]*[=+@-]/.test(s)) { s = "'" + s; }
     if (/[",\n\r]/.test(s)) { return '"' + s.replace(/"/g, '""') + '"'; }
     return s;
   }
@@ -130,7 +132,11 @@
   function messageHtml(m, bodyHtml) {
     var from = (m.from || {}).emailAddress || {};
     return "<!DOCTYPE html><html><head><meta charset='utf-8'><title>" +
-      esc(m.subject) + "</title><style>" +
+      esc(m.subject) + "</title>" +
+      // Exported email is untrusted HTML. Preserve formatting, block active content.
+      "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; " +
+      "style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'\">" +
+      "<style>" +
       "body{font-family:-apple-system,Segoe UI,sans-serif;margin:2rem;color:#222}" +
       "table.h{border-collapse:collapse;margin-bottom:1.5rem;font-size:14px}" +
       "table.h td{padding:2px 10px 2px 0;vertical-align:top}" +

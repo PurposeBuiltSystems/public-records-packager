@@ -68,6 +68,21 @@ check("date filter", P.applyFilters(msgs, { fromDate: "2026-03-10", toDate: "202
 check("participant filter", P.applyFilters(msgs, { participant: "ann@x.gov" }).length, 2);
 check("participant+date", P.applyFilters(msgs, { participant: "ann@x.gov", fromDate: "2026-03-20" }).length, 1);
 
+// Regression: filenames may be object-property names and truncation may expose a dot.
+check("prototype filename stays literal", P.attachmentNames(["constructor", "constructor"])[0], "constructor");
+check("prototype filename de-duplicated normally", P.attachmentNames(["constructor", "constructor"])[1], "constructor (2)");
+check("truncation strips exposed dot", P.sanitize("abc.def", 4), "abc");
+for (var formula of ["=1+1", "+1+1", "-1+1", "@SUM(1)", "\t=1+1"]) {
+  var exported = P.manifestCsv(P.plan([msg("x", formula, "2026-01-01T00:00:00Z", "a@b.c", [])]));
+  check("formula stored as text: " + formula, exported.indexOf(",'" + formula + ",") !== -1, true);
+}
+var bodyScript = "<script>alert(1)</script><img src='https://tracker.invalid/x'>";
+var guarded = P.messageHtml(msg("x", "test", "2026-01-01T00:00:00Z", "a@b.c", []), bodyScript);
+check("printable copy denies active content", guarded.indexOf("default-src 'none'") !== -1, true);
+check("printable copy blocks remote images", guarded.indexOf("img-src data:") !== -1, true);
+check("policy precedes untrusted body", guarded.indexOf("Content-Security-Policy") < guarded.indexOf(bodyScript), true);
+check("body preserved for faithful printing", guarded.indexOf(bodyScript) !== -1, true);
+
 if (failures) {
   console.error("\n" + failures + " packager test(s) FAILED");
   process.exit(1);

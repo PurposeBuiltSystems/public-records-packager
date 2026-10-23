@@ -18,6 +18,8 @@
   var SCOPES = ["Mail.Read", "Files.ReadWrite"];
 
   var pcaPromise = null;
+  var authEpoch = 0;
+  var authenticatedAs = null;
 
   function getPca() {
     if (!pcaPromise) {
@@ -70,8 +72,14 @@
   async function fetchRetry(url, opts) {
     var res = await fetch(url, opts);
     if (res.status === 429 || res.status === 503) {
-      var wait = Number(res.headers.get("Retry-After") || 3) * 1000;
-      await new Promise(function (r) { setTimeout(r, Math.min(wait, 15000)); });
+      var retryAfter = res.headers.get("Retry-After");
+      var wait = retryAfter && /^\d+(\.\d+)?$/.test(retryAfter.trim())
+        ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now();
+      if (!isFinite(wait)) { wait = 3000; }
+      wait = Math.max(0, wait);
+      // Surface long throttles rather than retrying before the server allows it.
+      if (wait > 15000) { return res; }
+      await new Promise(function (r) { setTimeout(r, wait); });
       res = await fetch(url, opts);
     }
     return res;
@@ -79,6 +87,7 @@
 
   async function currentAccount() {
     if (signedOut) { return null; }
+    if (authenticatedAs) { return authenticatedAs; }
     try {
       var pca = await getPca();
       var accts = (pca.getAllAccounts && pca.getAllAccounts()) || [];
@@ -93,6 +102,9 @@
    * top; the enforced state is what makes this real.
    */
   function signOut() {
+    ensuredFolders = {};
+    authEpoch++;
+    authenticatedAs = null;
     setSignedOut(true);
     var pending = pcaPromise;      // only clear what exists; never start a handshake here
     pcaPromise = null;
@@ -133,19 +145,36 @@
     ]);
   }
 
+  function accountLabel(result) {
+    if (result.account) { return result.account.username || result.account.name || "signed in"; }
+    try { return Office.context.mailbox.userProfile.emailAddress || "signed in"; }
+    catch (e) { return "signed in"; }
+  }
+
   async function getToken() {
+    var epoch = authEpoch;
+    function checkSession() {
+      if (epoch !== authEpoch) { throw new Error("Sign-in cancelled because the add-in session changed."); }
+    }
     var pca = await withTimeout(getPca(), 20000,
       "Sign-in didn't start. Fully quit Outlook (Cmd+Q) and reopen, then try again.");
+    checkSession();
     try {
       // Signed out means signed out: skip silent so the user must re-authenticate.
       if (signedOut) { throw new Error("signed out of the add-in"); }
-      return (await withTimeout(pca.acquireTokenSilent({ scopes: SCOPES }), 20000, "silent timeout")).accessToken;
+      var silent = await withTimeout(pca.acquireTokenSilent({ scopes: SCOPES }), 20000, "silent timeout");
+      checkSession();
+      authenticatedAs = accountLabel(silent);
+      return silent.accessToken;
     } catch (e) {
+      checkSession();
       var interactive = await withTimeout(
         pca.acquireTokenPopup({ scopes: SCOPES }), 120000,
         "Sign-in didn't finish. A Microsoft sign-in window may have opened behind Outlook — " +
         "check for it (or Mission Control), finish signing in, and click again. If no window " +
         "appeared at all, fully quit Outlook (Cmd+Q), reopen, and retry.");
+      checkSession();
+      authenticatedAs = accountLabel(interactive);
       setSignedOut(false);   // a real interactive sign-in ends the signed-out state
       return interactive.accessToken;
     }
@@ -174,6 +203,9 @@
       "&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,hasAttachments&$top=25";
     var guard = 0;
     while (url && guard++ < 40) {
+      if (!/^https:\/\/graph\.microsoft\.com\/v1\.0\//i.test(url) || /[\u0000-\u001f]/.test(url)) {
+        throw new Error("Graph returned an unsupported paging URL.");
+      }
       var res = await fetchRetry(url, { headers: { Authorization: "Bearer " + token } });
       if (!res.ok) { throw new Error("Graph search -> " + res.status + " " + (await res.text())); }
       var page = await res.json();
@@ -181,7 +213,7 @@
       if (onProgress) { onProgress(items.length); }
       url = page["@odata.nextLink"] || null;
     }
-    return { messages: items, capped: guard >= 40 };
+    return { messages: items, capped: !!url };
   }
 
   /** Exact MIME (.eml) content of a message. */
@@ -196,25 +228,50 @@
   /** Message body HTML (for the printable copy). */
   async function getBody(token, messageId) {
     var m = await graphJson(token, "GET", "/me/messages/" + messageId + "?$select=body");
-    return (m && m.body && m.body.content) || "";
+    var body = (m && m.body) || {};
+    var content = body.content || "";
+    if (String(body.contentType).toLowerCase() === "text") {
+      return "<pre>" + content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</pre>";
+    }
+    return content;
   }
 
-  /** Real file attachments with bytes (fetch individually when omitted). */
-  async function getAttachments(token, messageId) {
-    var list = await graphJson(token, "GET", "/me/messages/" + messageId + "/attachments");
+  /** File bytes plus an explicit record of attachment types not exported. */
+  async function getAttachmentExport(token, messageId) {
+    var values = [];
+    var next = "/me/messages/" + messageId + "/attachments";
+    var pages = 0;
+    while (next && pages++ < 100) {
+      var list = await graphJson(token, "GET", next);
+      values = values.concat(list.value || []);
+      var link = list["@odata.nextLink"];
+      if (link && link.indexOf(GRAPH + "/") !== 0) { throw new Error("Unexpected Graph paging URL."); }
+      next = link ? link.slice(GRAPH.length) : null;
+    }
+    if (next) { throw new Error("Attachment results exceeded the scan limit."); }
     var out = [];
-    for (var i = 0; i < (list.value || []).length; i++) {
-      var a = list.value[i];
-      if (a["@odata.type"] !== "#microsoft.graph.fileAttachment") { continue; }
+    var notExported = [];
+    for (var i = 0; i < values.length; i++) {
+      var a = values[i];
       if (a.isInline) { continue; }
+      if (a["@odata.type"] !== "#microsoft.graph.fileAttachment") {
+        notExported.push({ name: a.name || "(unnamed)", type: a["@odata.type"] || "unknown" });
+        continue;
+      }
       var bytes = a.contentBytes;
-      if (!bytes) {
+      if (typeof bytes !== "string") {
         var full = await graphJson(token, "GET", "/me/messages/" + messageId + "/attachments/" + a.id);
         bytes = full && full.contentBytes;
       }
-      if (bytes) { out.push({ name: a.name, contentBytes: bytes }); }
+      if (typeof bytes !== "string") { throw new Error("Attachment content unavailable: " + a.name); }
+      out.push({ name: a.name, contentBytes: bytes });
     }
-    return out;
+    return { files: out, notExported: notExported };
+  }
+
+  // Keep cached older task panes compatible with the original array API.
+  async function getAttachments(token, messageId) {
+    return (await getAttachmentExport(token, messageId)).files;
   }
 
   // ---------- OneDrive ----------
@@ -243,6 +300,21 @@
   }
 
   var ensuredFolders = {};
+
+  /** Reserve a new output folder. Never merge a new export with an old bundle. */
+  async function createBundleFolder(token, name) {
+    await ensureFolder(token, "Records Requests");
+    var res = await fetchRetry(GRAPH + "/me/drive/root:/Records%20Requests:/children", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, folder: {}, "@microsoft.graph.conflictBehavior": "fail" }),
+    });
+    if (res.status === 409) {
+      throw new Error("That bundle folder already exists. Choose a new folder name so earlier records and review notes are preserved.");
+    }
+    if (!res.ok) { throw new Error("Could not create the bundle folder (" + res.status + "). Check OneDrive before retrying."); }
+    return "Records Requests/" + name;
+  }
 
   /** Create every folder in `path` that doesn't exist yet (root-relative). */
   async function ensureFolder(token, path) {
@@ -300,6 +372,9 @@
         body: bytes.slice(start, end),
       });
       if (!res2.ok) { throw new Error("OneDrive chunk " + path + " -> " + res2.status); }
+      if (end === bytes.length && res2.status !== 200 && res2.status !== 201) {
+        throw new Error("OneDrive did not confirm completion of " + path + ". The bundle is incomplete.");
+      }
     }
     return {};
   }
@@ -320,10 +395,12 @@
     getToken: getToken,
     ensureDrive: ensureDrive,
     ensureFolder: ensureFolder,
+    createBundleFolder: createBundleFolder,
     searchMessages: searchMessages,
     getMime: getMime,
     getBody: getBody,
     getAttachments: getAttachments,
+    getAttachmentExport: getAttachmentExport,
     uploadFile: uploadFile,
     b64ToBytes: b64ToBytes,
     folderLink: folderLink,

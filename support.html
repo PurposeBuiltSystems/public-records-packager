@@ -44,6 +44,8 @@
     <li><code>manifest.csv</code> — index with released_in_full / exemption_notes /
         statute_cited columns for the records officer</li>
     <li><code>README.txt</code> — explains the layout to counsel/requesters</li>
+    <li><code>EXPORT-STATUS.txt</code> — marks an interrupted export as incomplete;
+        identifies capped searches and attachments needing separate review</li>
   </ul>
 
   <h2>Good to know</h2>
@@ -52,6 +54,11 @@
         around 1,000 results — run multiple narrower searches for very large requests.</li>
     <li><strong>No redaction:</strong> bundles contain unredacted records — review
         before release.</li>
+    <li><strong>Fresh folder per export:</strong> an existing folder name is rejected
+        so earlier records and review notes cannot be overwritten.</li>
+    <li><strong>Attachment types:</strong> file attachments are exported separately.
+        Embedded messages and linked files are reported in EXPORT-STATUS.txt;
+        inspect the original .eml and resolve those items before release.</li>
     <li><strong>Chronological numbering</strong> is oldest-first, the conventional
         production order.</li>
   </ul>

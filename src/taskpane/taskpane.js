@@ -11,6 +11,8 @@
 
   var found = [];   // search results
   var checked = {}; // message id -> bool
+  var building = false;
+  var searchCapped = false;
 
   /**
    * Account row. Certification policy 1100.5.7.1 requires a visible way out
@@ -107,17 +109,19 @@
   }
 
   async function search() {
+    if (building) { return; }
     var query = byId("query").value.trim();
     if (!query) { setStatus("error", "Enter search terms first."); return; }
     byId("search").disabled = true;
     byId("results").hidden = true;
-    found = []; checked = {};
+    found = []; checked = {}; searchCapped = false;
     try {
       setStatus("work", "Searching your mailbox…");
       var token = await GraphData.getToken();
       var res = await GraphData.searchMessages(token, query, function (n) {
         setStatus("work", "Searching your mailbox… " + n + " matches so far");
       });
+      searchCapped = !!res.capped;
       var filtered = Packager.applyFilters(res.messages, {
         fromDate: byId("fromDate").value || null,
         toDate: byId("toDate").value || null,
@@ -130,7 +134,7 @@
       found = filtered;
       found.forEach(function (m) { checked[m.id] = true; });
       if (!found.length) {
-        setStatus("info", "No messages matched. Broaden the terms or the date range.");
+        setStatus("info", searchCapped ? "No messages matched the filters within the capped search results. Narrow the search terms and search again." : "No messages matched. Broaden the terms or the date range.");
         return;
       }
       render();
@@ -190,16 +194,28 @@
   }
 
   async function build() {
+    if (building) { return; }
+    if (typeof GraphData.createBundleFolder !== "function" || typeof GraphData.getAttachmentExport !== "function") {
+      setStatus("error", "Outlook has cached an older exporter. Close and reopen this pane to load the current version before building a bundle.");
+      return;
+    }
     var selected = found.filter(function (m) { return checked[m.id]; });
     if (!selected.length) { setStatus("error", "Nothing selected."); return; }
     var bundleName = Packager.sanitize(byId("bundleName").value, 80) || "Records Request";
     var root = "Records Requests/" + bundleName;
+    var capped = searchCapped;
+    var notes = capped ? ["Search was capped. This export does not include every potential search match. Narrow and repeat searches before release."] : [];
+    var created = false;
+    building = true;
     byId("build").disabled = true;
+    byId("search").disabled = true;
     try {
       var token = await GraphData.getToken();
       setStatus("work", "Checking OneDrive…");
       await GraphData.ensureDrive(token);
-      await GraphData.ensureFolder(token, root);
+      root = await GraphData.createBundleFolder(token, bundleName);
+      created = true;
+      await GraphData.uploadFile(token, root + "/EXPORT-STATUS.txt", "INCOMPLETE — export in progress. Do not release this folder until export has finished and its manifest has been reviewed.");
       var plan = Packager.plan(selected);
 
       for (var i = 0; i < plan.length; i++) {
@@ -216,7 +232,11 @@
 
         // attachments in original format
         if (p.message.hasAttachments) {
-          var atts = await GraphData.getAttachments(token, p.message.id);
+          var attachmentResult = await GraphData.getAttachmentExport(token, p.message.id);
+          var atts = attachmentResult.files;
+          attachmentResult.notExported.forEach(function (a) {
+            notes.push(p.emlName + ": " + a.name + " (" + a.type + ") was not exported separately. Inspect the original .eml and resolve embedded messages or linked files before release.");
+          });
           var names = Packager.attachmentNames(atts.map(function (a) { return a.name; }));
           p.attachmentNames = names;
           if (atts.length) { await GraphData.ensureFolder(token, root + "/" + p.attDir); }
@@ -228,10 +248,14 @@
 
       setStatus("work", "Writing manifest…");
       await GraphData.uploadFile(token, root + "/manifest.csv", Packager.manifestCsv(plan));
-      await GraphData.uploadFile(token, root + "/README.txt", Packager.readmeText(bundleName, plan.length));
+      await GraphData.uploadFile(token, root + "/README.txt", Packager.readmeText(bundleName, plan.length) +
+        "\r\nSearch covers the signed-in mailbox and the selected results only.\r\n" + notes.join("\r\n"));
+      await GraphData.uploadFile(token, root + "/EXPORT-STATUS.txt", notes.length ?
+        "REVIEW REQUIRED — selected messages exported, with limitations:\r\n" + notes.join("\r\n") :
+        "EXPORT FINISHED — all selected messages and supported file attachments exported. Review manifest.csv and search coverage before release.");
 
       var link = await GraphData.folderLink(token, root);
-      setStatus("info", "Bundle complete: " + plan.length + " messages in OneDrive → " + root +
+      setStatus("info", (notes.length ? "Export finished — review required (see EXPORT-STATUS.txt): " : "Export finished: ") + plan.length + " messages in OneDrive → " + root +
         (link ? "  (" + link + ")" : ""));
       if (link) {
         try {
@@ -241,9 +265,12 @@
         } catch (e) { /* link is in the status line */ }
       }
     } catch (e) {
-      setStatus("error", "Bundle failed: " + ((e && e.message) || e) + " — already-uploaded files remain in OneDrive; fix and rebuild into a new folder name.");
+      setStatus("error", "Bundle failed: " + ((e && e.message) || e) +
+        (created ? " — this folder is incomplete. Already-uploaded files remain in OneDrive; fix and rebuild into a new folder name." : " — no records were uploaded by this attempt."));
     } finally {
+      building = false;
       byId("build").disabled = false;
+      byId("search").disabled = false;
     }
   }
 })();
